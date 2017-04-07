@@ -1,8 +1,11 @@
 import random
 import Parser
+
 from deap import base
 from deap import creator
 from deap import tools
+from scoop import futures
+
 
 creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
 creator.create("Individual", list, fitness=creator.FitnessMin) #Hacemos una lista (por mas que sea una lista de un solo elemento) por si despues se desea modificar y agregar mas factores
@@ -25,8 +28,10 @@ def evaluarPromedio(individual):
 #Operadores
 toolbox.register("evaluate", evaluarPromedio)
 toolbox.register("mate", tools.cxUniform)
-toolbox.register("mutate", tools.mutUniformInt, low=1, up=45, indpb=0.02)
+toolbox.register("mutate", tools.mutUniformInt, low=1, up=100, indpb=0.02)
 toolbox.register("select", tools.selTournament, tournsize=3)
+#toolbox.register("map", futures.map)
+
 
 ind1 = toolbox.individual()
 #print ind1[0]
@@ -39,8 +44,8 @@ print ind1
 print pop1
 
 NGEN = 10
-CXPB = 0.50
-MUTPB = 0.20
+#CXPB = 0.50
+#MUTPB = 0.20
 
 #Algoritmo
 def main():
@@ -73,17 +78,14 @@ def main():
         print offspring
         #Aplicacmos crossover y mutacion en el offSpring
         for child1, child2 in zip(offspring[::2], offspring[1::2]):
-            if random.random() < CXPB:
-                print child1
-                print child2
-                toolbox.mate(child1, child2, 0.10)
-                del child1.fitness.values
-                del child2.fitness.values
+            #if random.random() < CXPB:
+            toolbox.mate(child1, child2, 0.10)
+            del child1.fitness.values
+            del child2.fitness.values
 
         for mutant in offspring:
-            if random.random() < MUTPB:
-                toolbox.mutate(mutant)
-                del mutant.fitness.values
+            toolbox.mutate(mutant)
+            del mutant.fitness.values
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]

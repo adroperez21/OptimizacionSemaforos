@@ -4,6 +4,22 @@ import os
 PATH_SALIDA = '/Users/adrianperezgarrone/Desktop/pruebasumodesdeprog/sumo-0.23-2.0/docs/tutorial/traci_tls_mandado_snow/emission2.xml'
 PATH_CONFIGURACION_SEMAFOROS = '/Users/adrianperezgarrone/Desktop/pruebasumodesdeprog/sumo-0.23-2.0/docs/tutorial/traci_tls_mandado_snow/data/cross.net.xml'
 EJECUCION_SUMO = 'sumo /Users/adrianperezgarrone/Desktop/pruebasumodesdeprog/sumo-0.23-2.0/docs/tutorial/traci_tls_mandado_snow/data/cross.sumocfg'
+CONF_SUMO = 'sumo /Users/adrianperezgarrone/Desktop/pruebasumodesdeprog/sumo-0.23-2.0/docs/tutorial/traci_tls_mandado_snow/data/cross.sumocfg.xml'
+
+OUTPUT_PATH = '/Users/adrianperezgarrone/Desktop/pruebasumodesdeprog/sumo-0.23-2.0/docs/tutorial/traci_tls_mandado_snow/emission_'
+
+CICLO = 60
+
+class parametros_parser():
+
+    def __init__(self, secuencia_emissions = 0):
+        self.secuencia_emissions = secuencia_emissions
+
+    def set_secuencia_emissions(self, valor):
+        self.secuencia_emissions = valor
+
+
+parametros = parametros_parser()
 
 def parse_salida_sumo():
     e = xml.etree.ElementTree.parse(PATH_SALIDA).getroot()
@@ -42,10 +58,10 @@ def parse_salida_sumo():
     print(vehicleMap)
     promedioVertical = (sumUp/totalUp)
     promedioHorizontal = (sumLeft/totalLeft)
-    return (promedioHorizontal / 2*promedioVertical)
+    return (promedioHorizontal + promedioVertical)/2
 
 
-CICLO = 60
+
 #Nos estamos adaptando al ejemplo que ya tenemos hecho, asi que modificamos esas 4 fases de acuerdo al porcentaje
 #< phase duration = "60" state = "GrGr" / >   las letras en posicion dos y cuatro son las horizontales
 #< phase duration = "6" state = "yryr" / >
@@ -70,26 +86,32 @@ def modificar_fase_semaforos(individual):
     semaforos[2].set("duration", str(duracionEnRojoVertical-1))
     semaforos[3].set("duration", str(1))
 
-    #for x in range(0, 4): # ejecuta 4 veces, hace 0 1 2 3
-    #    semaforos[x].set("duration", str(individual[x]))
-
-    #print root.tag
-    #print(root)
-    #print xml.etree.ElementTree.tostring(root, encoding="utf-8", method='xml')
-    #tree.write('cross.net.xml');
     tree.write(PATH_CONFIGURACION_SEMAFOROS);
 
-    #Recorremos cada semaforo
-    #for atype in e.findall('tlLogic'):
-        #Recorremos cada phase dentro del semaforo.
-     #   for vtype in atype.findall('phase'):
+
+def modificar_output():
+    tree = xml.etree.ElementTree.parse(CONF_SUMO)
+    root = tree.getroot()
+
+    output = root.findall("output/emission-output")
+
+    secuencia_emissions = parametros.secuencia_emissions + 1
+
+    value = OUTPUT_PATH + str(secuencia_emissions) + '.xml'
+
+    #Para este caso como tenemos 4 fases vamo a dejar la segunda que incluye la amarilla en 1.
+    output[0].set("value", str(value))
+
+    tree.write(PATH_CONFIGURACION_SEMAFOROS);
+    parametros.set_secuencia_emissions(secuencia_emissions)
 
 
 def evaluar(individual):
     modificar_fase_semaforos(individual)
+    #modificar_output()
     os.system(EJECUCION_SUMO)
     tiempoPromedio = parse_salida_sumo()
     return tiempoPromedio
 
-modificar_fase_semaforos([50])
+#modificar_fase_semaforos([50])
 #evaluar()
