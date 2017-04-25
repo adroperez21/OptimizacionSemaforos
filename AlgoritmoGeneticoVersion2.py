@@ -20,7 +20,7 @@ def algorithm_genetic():
     parametros.set_MUTPB(0.20)              #Probabilidad de mutacion
     parametros.set_individual_min(1)        #Menor valor que puede obtener un individuo
     parametros.set_individual_max(100)      #Mayor valor que puede obtener un individuo
-    parametros.set_individual_lengh(1)      #Cantidad de valores que se representa un individuo
+    parametros.set_individual_lengh(2)      #Cantidad de valores que se representa un individuo
     parametros.set_population(10)           #Cantidad inicial de la poblacion
     parametros.set_indbp(0.05)              #Parametro de mutacion
     parametros.set_tournament_size(3)       #Parametro de seleccion
