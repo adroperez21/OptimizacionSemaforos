@@ -1,0 +1,6 @@
+<Files id="Primer Prueba">
+	<path name="configuracion" path="/Users/adrianperezgarrone/Desktop/pruebasumodesdeprog/sumo-0.23-2.0/docs/tutorial/simulacion_2_semaforos/map.net.xml"></path>
+	<path name="salida" path="/Users/adrianperezgarrone/Desktop/pruebasumodesdeprog/sumo-0.23-2.0/docs/tutorial/simulacion_2_semaforos/reportes/emission.xml"></path>
+    <path name="ejecucion_sumo" path="sumo /Users/adrianperezgarrone/Desktop/pruebasumodesdeprog/sumo-0.23-2.0/docs/tutorial/simulacion_2_semaforos/map.sumocfg"></path>
+</Files>
+
