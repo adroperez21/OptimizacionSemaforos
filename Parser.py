@@ -1,117 +1,98 @@
-import xml.etree.ElementTree
+from xml.etree import ElementTree
 import os
 
-PATH_SALIDA = '/Users/adrianperezgarrone/Desktop/pruebasumodesdeprog/sumo-0.23-2.0/docs/tutorial/traci_tls_mandado_snow/emission2.xml'
-PATH_CONFIGURACION_SEMAFOROS = '/Users/adrianperezgarrone/Desktop/pruebasumodesdeprog/sumo-0.23-2.0/docs/tutorial/traci_tls_mandado_snow/data/cross.net.xml'
-EJECUCION_SUMO = 'sumo /Users/adrianperezgarrone/Desktop/pruebasumodesdeprog/sumo-0.23-2.0/docs/tutorial/traci_tls_mandado_snow/data/cross.sumocfg'
-CONF_SUMO = 'sumo /Users/adrianperezgarrone/Desktop/pruebasumodesdeprog/sumo-0.23-2.0/docs/tutorial/traci_tls_mandado_snow/data/cross.sumocfg.xml'
 
-OUTPUT_PATH = '/Users/adrianperezgarrone/Desktop/pruebasumodesdeprog/sumo-0.23-2.0/docs/tutorial/traci_tls_mandado_snow/emission_'
-
-CICLO = 60
-
-class parametros_parser():
-
-    def __init__(self, secuencia_emissions = 0):
-        self.secuencia_emissions = secuencia_emissions
-
-    def set_secuencia_emissions(self, valor):
-        self.secuencia_emissions = valor
+#Semaforos a tener en cuenta
+#917490524
+#917618484
 
 
-parametros = parametros_parser()
+def load_paths():
+    global path_configuracion_semaforos
+    global path_salida
+    global path_ejecucion_sumo
+    with open('./paths.xml', 'rt') as pt:
+        print pt
+        parser_tree = ElementTree.parse(pt)
+        p = parser_tree.getroot()
+    for node in p.findall('path'):
+        name = node.attrib.get('name')
+        if name == 'configuracion':
+            path_configuracion_semaforos = node.attrib.get('path')
+        if name == 'salida':
+            path_salida = node.attrib.get('path')
+        if name == 'ejecucion_sumo':
+            path_ejecucion_sumo = node.attrib.get('path')
 
 def parse_salida_sumo():
-    e = xml.etree.ElementTree.parse(PATH_SALIDA).getroot()
+    with open(path_salida, 'rt') as ps:
+        tree = ElementTree.parse(ps)
+        e = tree.getroot()
 
     print(e)
-    vehicleMap = {}
-    actualValue = 0
+    vehicle_map = {}
 
-    totalUp = 0
-    totalLeft = 0
+    total_up = 0
+    total_left = 0
 
-    sumUp = 0.0
-    sumLeft = 0.0
+    sum_up = 0.0
+    sum_left = 0.0
 
     for atype in e.findall('timestep'):
         for vtype in atype.findall('vehicle'):
-            if vtype.get('id') in vehicleMap:
-                actualValue = vehicleMap[vtype.get('id')][0]
-                if actualValue < float(vtype.get('waiting')):
-                    vehicleMap[vtype.get('id')] = (float(vtype.get('waiting')), vtype.get('route'))
+            if vtype.get('id') in vehicle_map:
+                actual_value = vehicle_map[vtype.get('id')][0]
+                if actual_value < float(vtype.get('waiting')):
+                    vehicle_map[vtype.get('id')] = (float(vtype.get('waiting')), vtype.get('route'))
                     if vtype.get('route') == 'left':
-                        sumLeft = sumLeft - actualValue + float(vtype.get('waiting'))
+                        sum_left = sum_left - actual_value + float(vtype.get('waiting'))
                     else:
-                        sumUp = sumUp - actualValue + float(vtype.get('waiting'))
+                        sum_up = sum_up - actual_value + float(vtype.get('waiting'))
             else:
-                vehicleMap[vtype.get('id')] = (float(vtype.get('waiting')), vtype.get('route'))
+                vehicle_map[vtype.get('id')] = (float(vtype.get('waiting')), vtype.get('route'))
                 if vtype.get('route') == 'left':
-                    totalLeft = totalLeft + 1
-                    sumLeft = sumLeft + float(vtype.get('waiting'))
+                    total_left = total_left + 1
+                    sum_left = sum_left + float(vtype.get('waiting'))
                 else:
-                    totalUp = totalUp + 1
-                    sumUp = sumUp + float(vtype.get('waiting'))
+                    total_up = total_up + 1
+                    sum_up = sum_up + float(vtype.get('waiting'))
 
-    print('TIempo de espera promedio ruta UP: ', sumUp/totalUp)
-    print('TIempo de espera promedio ruta LEFT: ', sumLeft/totalLeft)
-    print(vehicleMap)
-    promedioVertical = (sumUp/totalUp)
-    promedioHorizontal = (sumLeft/totalLeft)
-    return (promedioHorizontal + promedioVertical)/2
+    print('TIempo de espera promedio ruta UP: ', sum_up / total_up)
+    print('TIempo de espera promedio ruta LEFT: ', sum_left / total_left)
+    print(vehicle_map)
+    promedio_vertical = (sum_up / total_up)
+    promedio_horizontal = (sum_left / total_left)
+    return promedio_horizontal, promedio_vertical
 
-
-
-#Nos estamos adaptando al ejemplo que ya tenemos hecho, asi que modificamos esas 4 fases de acuerdo al porcentaje
-#< phase duration = "60" state = "GrGr" / >   las letras en posicion dos y cuatro son las horizontales
-#< phase duration = "6" state = "yryr" / >
-#< phase duration = "30" state = "rGrG" / >
-#< phase duration = "6" state = "ryry" / >
 def modificar_fase_semaforos(individual):
-    tree = xml.etree.ElementTree.parse(PATH_CONFIGURACION_SEMAFOROS)
+    load_paths()
+    tree = ElementTree.parse(path_configuracion_semaforos)
     root = tree.getroot()
-
+    ciclo_semaforos = 60
     semaforos = root.findall("tlLogic/phase")
 
     alfa = individual[0]
-    print "Alfa: %s" %  str(alfa)
-    porcentaje = (alfa/100.0)
+    print "Alfa: %s" % str(alfa)
+    porcentaje = (alfa / 100.0)
 
-    duracionEnRojoVertical = CICLO * porcentaje
-    print "La duracion de la luz roja en la via vertical es: %s" % str(duracionEnRojoVertical)
+    duracion_rojo_vertical = ciclo_semaforos * porcentaje
+    print "La duracion de la luz roja en la via vertical es: %s" % str(duracion_rojo_vertical)
 
-    #Para este caso como tenemos 4 fases vamo a dejar la segunda que incluye la amarilla en 1.
-    semaforos[0].set("duration", str(CICLO - duracionEnRojoVertical -1))
+    # Para este caso como tenemos 4 fases vamo a dejar la segunda que incluye la amarilla en 1.
+    semaforos[0].set("duration", str(ciclo_semaforos - duracion_rojo_vertical - 1))
     semaforos[1].set("duration", str(1))
-    semaforos[2].set("duration", str(duracionEnRojoVertical-1))
+    semaforos[2].set("duration", str(duracion_rojo_vertical - 1))
     semaforos[3].set("duration", str(1))
 
-    tree.write(PATH_CONFIGURACION_SEMAFOROS);
+    tree.write(path_configuracion_semaforos)
 
-
-def modificar_output():
-    tree = xml.etree.ElementTree.parse(CONF_SUMO)
-    root = tree.getroot()
-
-    output = root.findall("output/emission-output")
-
-    secuencia_emissions = parametros.secuencia_emissions + 1
-
-    value = OUTPUT_PATH + str(secuencia_emissions) + '.xml'
-
-    #Para este caso como tenemos 4 fases vamo a dejar la segunda que incluye la amarilla en 1.
-    output[0].set("value", str(value))
-
-    tree.write(PATH_CONFIGURACION_SEMAFOROS);
-    parametros.set_secuencia_emissions(secuencia_emissions)
+def ejejcutar_sumo():
+    os.system(path_ejecucion_sumo)
 
 
 def evaluar(individual):
+    load_paths()
     modificar_fase_semaforos(individual)
-    #modificar_output()
-    os.system(EJECUCION_SUMO)
-    tiempoPromedio = parse_salida_sumo()
-    return tiempoPromedio
-
-#modificar_fase_semaforos([50])
-#evaluar()
+    ejejcutar_sumo()
+    tiempo_promedio_horizontal, tiempo_promedio_vertical = parse_salida_sumo()
+    return tiempo_promedio_horizontal, tiempo_promedio_vertical
