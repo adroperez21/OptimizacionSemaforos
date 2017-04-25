@@ -64,6 +64,42 @@ def parse_salida_sumo():
     promedio_horizontal = (sum_left / total_left)
     return promedio_horizontal, promedio_vertical
 
+
+def modificar_fase_semaforos_v2(individual):
+    load_paths()
+    tree = ElementTree.parse(path_configuracion_semaforos)
+    root = tree.getroot()
+    ciclo_semaforos = 60
+
+    semaforos = root.findall("tlLogic")
+
+    alfa = individual[0]
+    alfa2 = individual[0]
+    print "Alfa: %s" % str(alfa)
+    porcentaje = (alfa / 100.0)
+    porcentaje2 = (alfa2 / 100.0)
+    duracion_rojo = ciclo_semaforos * porcentaje
+    duracion_rojo_2 = ciclo_semaforos * porcentaje2
+    #print "La duracion de la luz roja en la via vertical es: %s" % str(duracion_rojo_vertical)
+
+    for tlLogic in semaforos:
+        if tlLogic.get('id') == '917490524':
+            durations = tlLogic.findall("phase")
+            durations[0].set("duration", str(ciclo_semaforos - duracion_rojo - 1))
+            durations[1].set("duration", str(1))
+            durations[2].set("duration", str(duracion_rojo - 1))
+            durations[3].set("duration", str(1))
+        if tlLogic.get('id') == '917618484':
+            durations = tlLogic.findall("phase")
+            durations[0].set("duration", str(ciclo_semaforos - duracion_rojo_2 - 1))
+            durations[1].set("duration", str(1))
+            durations[2].set("duration", str(duracion_rojo_2 - 1))
+            durations[3].set("duration", str(1))
+
+    tree.write(path_configuracion_semaforos)
+
+modificar_fase_semaforos_v2([100,100])
+
 def modificar_fase_semaforos(individual):
     load_paths()
     tree = ElementTree.parse(path_configuracion_semaforos)
@@ -85,6 +121,7 @@ def modificar_fase_semaforos(individual):
     semaforos[3].set("duration", str(1))
 
     tree.write(path_configuracion_semaforos)
+
 
 def ejejcutar_sumo():
     os.system(path_ejecucion_sumo)
