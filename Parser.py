@@ -6,6 +6,24 @@ import os
 #917490524
 #917618484
 
+class semaphore():
+    def __init__(self, name, lanes=[], meanHalt=0):
+        self.name = name
+        self.lanes = lanes
+        self.meanHalt = meanHalt
+
+    def getName(self):
+        return self.name
+
+    def getLanes(self):
+        return self.lanes
+
+    def getMeanHalt(self):
+        return self.meanHalt
+
+    def setMeanHalt(self, halt):
+        self.meanHalt = halt
+
 
 def load_paths():
     global path_configuracion_semaforos
@@ -74,12 +92,17 @@ def modificar_fase_semaforos_v2(individual):
     semaforos = root.findall("tlLogic")
 
     alfa = individual[0]
-    alfa2 = individual[0]
+    alfa2 = individual[1]
+    offset = individual[2]
+
     print "Alfa: %s" % str(alfa)
     porcentaje = (alfa / 100.0)
     porcentaje2 = (alfa2 / 100.0)
+    porcentajeOffSet = (alfa2 / 100.0)
+
     duracion_rojo = ciclo_semaforos * porcentaje
     duracion_rojo_2 = ciclo_semaforos * porcentaje2
+    valorOffSet = ciclo_semaforos * porcentajeOffSet
     #print "La duracion de la luz roja en la via vertical es: %s" % str(duracion_rojo_vertical)
 
     for tlLogic in semaforos:
@@ -90,6 +113,7 @@ def modificar_fase_semaforos_v2(individual):
             durations[2].set("duration", str(duracion_rojo - 1))
             durations[3].set("duration", str(1))
         if tlLogic.get('id') == '917618484':
+            tlLogic.set("offset", str(ciclo_semaforos))
             durations = tlLogic.findall("phase")
             durations[0].set("duration", str(ciclo_semaforos - duracion_rojo_2 - 1))
             durations[1].set("duration", str(1))
@@ -98,7 +122,7 @@ def modificar_fase_semaforos_v2(individual):
 
     tree.write(path_configuracion_semaforos)
 
-modificar_fase_semaforos_v2([100,100])
+#modificar_fase_semaforos_v2([100,100])
 
 def modificar_fase_semaforos(individual):
     load_paths()
@@ -122,6 +146,54 @@ def modificar_fase_semaforos(individual):
 
     tree.write(path_configuracion_semaforos)
 
+def load_tlLogic():
+    with open(path_configuracion_semaforos, 'rt') as ps:
+        tree = ElementTree.parse(ps)
+        netRoot = tree.getroot()
+
+        tlLogicIdMap = {'917490524', '917618484'}
+        tlLogicMap = []
+
+        for tlLogic in netRoot.findall('tlLogic'):
+            semaphoreId = tlLogic.get('id')
+            if semaphoreId in tlLogicIdMap:
+                for junction in netRoot.findall('junction'):
+                    if semaphoreId == junction.get('id'):
+                        incLanes = junction.get('incLanes').split(' ')
+                        tlLogic_junc = semaphore(semaphoreId, incLanes, 0)
+                        tlLogicMap.append(tlLogic_junc)
+    return tlLogicMap
+
+def load_detectors():
+    tlLogicMap = load_tlLogic()
+    with open('/Users/adrianperezgarrone/Desktop/pruebasumodesdeprog/sumo-0.23-2.0/docs/tutorial/simulacion_2_semaforos/e2output.xml', 'rt') as ps:
+        print ps
+        tree = ElementTree.parse(ps)
+        detectorsRoot = tree.getroot()
+
+        for tlLogic in tlLogicMap:
+            tlLogicHalt = 0
+
+            detectorHalt = 0
+            detectorCount = 0
+            for lane in tlLogic.getLanes():
+                detectorName = 'e2det_' + lane
+                intervalHalt = 0
+                intervalCount = 0
+                for detector in detectorsRoot.findall('interval'):
+                    if (detector.get('id') == detectorName) & (float(detector.get('maxVehicleNumber')) > 0) :
+                        intervalHalt += float(detector.get('meanHaltingDuration'))
+                        intervalCount += 1
+
+                    if intervalCount > 0:
+                        detectorHalt += (intervalHalt/intervalCount)
+
+                    detectorCount += 1
+
+                tlLogicHalt += (detectorHalt/detectorCount)
+            tlLogic.setMeanHalt(tlLogicHalt)
+            print(tlLogic.getName(), tlLogic.getMeanHalt())
+    return tlLogicMap
 
 def ejejcutar_sumo():
     os.system(path_ejecucion_sumo)
@@ -131,5 +203,8 @@ def evaluar(individual):
     load_paths()
     modificar_fase_semaforos(individual)
     ejejcutar_sumo()
-    tiempo_promedio_horizontal, tiempo_promedio_vertical = parse_salida_sumo()
-    return tiempo_promedio_horizontal, tiempo_promedio_vertical
+    tiempo_promedio_1 = load_detectors()[0]
+    tiempo_promedio_2 = load_detectors()[1]
+    #tiempo_promedio_horizontal, tiempo_promedio_vertical = parse_salida_sumo()
+    #return tiempo_promedio_horizontal, tiempo_promedio_vertical
+    return tiempo_promedio_1, tiempo_promedio_2
